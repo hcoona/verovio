@@ -371,6 +371,7 @@
 { U'\U0000E650', "keyboardPedalPed" },
 { U'\U0000E651', "keyboardPedalP" },
 { U'\U0000E655', "keyboardPedalUp" },
+{ U'\U0000E656', "keyboardPedalHalf" },
 { U'\U0000E659', "keyboardPedalSost" },
 { U'\U0000E65A', "keyboardPedalS" },
 { U'\U0000E770', "pictBeaterSoftXylophoneUp" },

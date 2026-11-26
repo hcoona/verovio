@@ -381,6 +381,7 @@ enum {
     SMUFL_E650_keyboardPedalPed = 0xE650,
     SMUFL_E651_keyboardPedalP = 0xE651,
     SMUFL_E655_keyboardPedalUp = 0xE655,
+    SMUFL_E656_keyboardPedalHalf = 0xE656,
     SMUFL_E659_keyboardPedalSost = 0xE659,
     SMUFL_E65A_keyboardPedalS = 0xE65A,
     SMUFL_E770_pictBeaterSoftXylophoneUp = 0xE770,
@@ -683,7 +684,7 @@ enum {
 };
 
 /** The number of glyphs for verification **/
-#define SMUFL_COUNT 658
+#define SMUFL_COUNT 659
 
 } // namespace vrv
 
