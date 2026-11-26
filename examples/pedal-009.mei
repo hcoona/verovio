@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://music-encoding.org/schema/5.1/mei-all.rng" type="application/xml" schematypens="http://relaxng.org/ns/structure/1.0"?>
+<?xml-model href="https://music-encoding.org/schema/5.1/mei-all.rng" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei" meiversion="5.1">
+   <meiHead>
+      <fileDesc>
+         <titleStmt>
+            <title>Pedal line rendering with @lform and @lwidth</title>
+         </titleStmt>
+         <pubStmt>
+            <date isodate="2026-11-26">2026-11-26</date>
+            <pubPlace>
+               <ref target="https://github.com/rism-digital/verovio/issues/4611" />
+            </pubPlace>
+         </pubStmt>
+         <seriesStmt>
+            <title>Verovio test suite</title>
+         </seriesStmt>
+         <notesStmt>
+            <annot>Pedal lines support @lform (wavy, dashed, dotted) and @lwidth while keeping end hooks and bounce notches solid (excerpt after Debussy, Clair de lune, 1905, public domain).</annot>
+         </notesStmt>
+      </fileDesc>
+      <encodingDesc>
+         <appInfo>
+            <application version="6.5.0" label="2">
+               <name>Verovio</name>
+            </application>
+         </appInfo>
+      </encodingDesc>
+   </meiHead>
+   <music>
+      <body>
+         <mdiv>
+            <score>
+               <scoreDef meter.count="9" meter.unit="8" key.sig="5f">
+                  <staffGrp bar.thru="true" symbol="brace">
+                     <staffDef n="1" lines="5" clef.shape="G" clef.line="2" />
+                     <staffDef n="2" lines="5" clef.shape="F" clef.line="4" />
+                  </staffGrp>
+               </scoreDef>
+               <section>
+                  <measure n="1">
+                     <staff n="1">
+                        <layer n="1">
+                           <rest dur="8" />
+                           <beam>
+                              <chord dur="8"><note oct="5" pname="f" /><note oct="5" pname="a" accid.ges="f" /></chord>
+                              <chord dur="8"><note oct="5" pname="d" accid.ges="f" /><note oct="5" pname="f" /></chord>
+                           </beam>
+                           <chord dur="2" dots="1"><note oct="5" pname="d" accid.ges="f" /><note oct="5" pname="f" /></chord>
+                        </layer>
+                     </staff>
+                     <staff n="2">
+                        <layer n="1">
+                           <chord dur="2" dots="1"><note oct="3" pname="f" /><note oct="3" pname="a" accid.ges="f" /></chord>
+                           <chord dur="4" dots="1"><note oct="3" pname="g" accid.ges="f" /><note oct="3" pname="a" accid.ges="f" /></chord>
+                        </layer>
+                     </staff>
+                     <pedal staff="2" tstamp="1" dir="down" form="pedline" lform="wavy" />
+                     <pedal staff="2" tstamp="7" dir="bounce" form="pedline" lform="dotted" />
+                     <pedal staff="2" tstamp="9.5" dir="up" form="pedline" />
+                  </measure>
+                  <measure n="2" right="end">
+                     <staff n="1">
+                        <layer n="1">
+                           <beam>
+                              <chord dur="8"><note oct="5" pname="c" /><note oct="5" pname="e" accid.ges="f" /></chord>
+                              <chord dur="8"><note oct="5" pname="d" accid.ges="f" /><note oct="5" pname="f" /></chord>
+                              <chord dur="8"><note oct="5" pname="c" /><note oct="5" pname="e" accid.ges="f" /></chord>
+                           </beam>
+                           <chord dur="2" dots="1"><note oct="4" pname="b" accid.ges="f" /><note oct="5" pname="d" accid.ges="f" /></chord>
+                        </layer>
+                     </staff>
+                     <staff n="2">
+                        <layer n="1">
+                           <chord dur="4" dots="1"><note oct="2" pname="g" accid.ges="f" /><note oct="3" pname="g" accid.ges="f" /></chord>
+                           <chord dur="2" dots="1"><note oct="2" pname="f" /><note oct="3" pname="f" /></chord>
+                        </layer>
+                     </staff>
+                     <pedal staff="2" tstamp="1" dir="down" form="line" />
+                     <pedal staff="2" tstamp="4" dir="bounce" form="line" lform="dashed" lwidth="medium" />
+                     <pedal staff="2" tstamp="9.5" dir="up" form="line" />
+                  </measure>
+               </section>
+            </score>
+         </mdiv>
+      </body>
+   </music>
+</mei>
