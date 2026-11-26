@@ -29,6 +29,8 @@ class Pedal : public ControlElement,
               public TimeSpanningInterface,
               public AttExtSymAuth,
               public AttExtSymNames,
+              public AttLineRend,
+              public AttLineRendBase,
               public AttPedalLog,
               public AttPedalVis,
               public AttPlacementRelStaff,
@@ -84,6 +86,11 @@ public:
      * Get the SMuFL glyph for the pedal based on function or glyph.num
      */
     char32_t GetPedalGlyph() const;
+
+    /**
+     * Calculate the pedal line width based on @lwidth or the pedalLineThickness option
+     */
+    int GetLineWidth(const Doc *doc, int unit) const;
 
     //----------//
     // Functors //

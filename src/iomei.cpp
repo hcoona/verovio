@@ -2322,6 +2322,8 @@ void MEIOutput::WritePedal(pugi::xml_node currentNode, Pedal *pedal)
     this->WriteTimeSpanningInterface(currentNode, pedal);
     pedal->WriteExtSymAuth(currentNode);
     pedal->WriteExtSymNames(currentNode);
+    pedal->WriteLineRend(currentNode);
+    pedal->WriteLineRendBase(currentNode);
     pedal->WritePedalLog(currentNode);
     pedal->WritePedalVis(currentNode);
     pedal->WritePlacementRelStaff(currentNode);
@@ -6570,6 +6572,8 @@ bool MEIInput::ReadPedal(Object *parent, pugi::xml_node pedal)
     this->ReadTimeSpanningInterface(pedal, vrvPedal);
     vrvPedal->ReadExtSymAuth(pedal);
     vrvPedal->ReadExtSymNames(pedal);
+    vrvPedal->ReadLineRend(pedal);
+    vrvPedal->ReadLineRendBase(pedal);
     vrvPedal->ReadPedalLog(pedal);
     vrvPedal->ReadPedalVis(pedal);
     vrvPedal->ReadPlacementRelStaff(pedal);
