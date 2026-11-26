@@ -1141,7 +1141,7 @@ void View::DrawPedalLine(
 
     const int unit = m_doc->GetDrawingUnit(staff->m_drawingStaffSize);
     const int bracketSize = m_doc->GetDrawingDoubleUnit(staff->m_drawingStaffSize);
-    const int lineWidth = m_options->m_pedalLineThickness.GetValue() * unit;
+    const int lineWidth = pedal->GetLineWidth(m_doc, unit);
 
     int startX = x1;
     if (hasStartEndpoint) {
@@ -1202,24 +1202,71 @@ void View::DrawPedalLine(
         const int notchWidth = std::min(bracketSize * 3 / 4, maxNotch);
         const int bodyStartX = startBounce ? (startX + notchWidth) : startX;
         const int bodyEndX = endBounce ? (endX - notchWidth) : endX;
+        const data_LINEFORM lform = pedal->HasLform() ? pedal->GetLform() : LINEFORM_solid;
+        const LineCapStyle cap = (startBounce || endBounce) ? LINECAP_ROUND : LINECAP_BUTT;
 
-        Point points[4];
-        int pointCount = 0;
-        if (startBounce || startHook) {
-            points[pointCount++] = { this->ToDeviceContextX(startX), yTop };
-        }
-        points[pointCount++] = { this->ToDeviceContextX(bodyStartX), yBaseline };
-        if (bodyEndX > bodyStartX) {
-            points[pointCount++] = { this->ToDeviceContextX(bodyEndX), yBaseline };
-        }
-        if (endBounce || endHook) {
-            points[pointCount++] = { this->ToDeviceContextX(endX), yTop };
-        }
+        if ((lform == LINEFORM_dashed) || (lform == LINEFORM_dotted) || (lform == LINEFORM_wavy)) {
+            dc->SetPen(lineWidth, PEN_SOLID, 0, 0, cap, LINEJOIN_MITER);
+            if (startBounce || startHook) {
+                dc->DrawLine(this->ToDeviceContextX(startX), yTop, this->ToDeviceContextX(bodyStartX), yBaseline);
+            }
+            if (endBounce || endHook) {
+                dc->DrawLine(this->ToDeviceContextX(bodyEndX), yBaseline, this->ToDeviceContextX(endX), yTop);
+            }
+            dc->ResetPen();
 
-        dc->SetPen(
-            lineWidth, PEN_SOLID, 0, 0, (startBounce || endBounce) ? LINECAP_ROUND : LINECAP_BUTT, LINEJOIN_MITER);
-        dc->DrawPolyline(pointCount, points);
-        dc->ResetPen();
+            if (bodyEndX > bodyStartX) {
+                if (lform == LINEFORM_wavy) {
+                    const int bodyWidth = bodyEndX - bodyStartX;
+                    const int numPeaks = std::max(1, bodyWidth / (unit * 2));
+                    const int yWavePeak = this->ToDeviceContextY(y + bracketSize * 3 / 5);
+                    std::vector<Point> wavePoints;
+                    wavePoints.reserve(static_cast<size_t>(numPeaks) * 2 + 1);
+                    wavePoints.push_back({ this->ToDeviceContextX(bodyStartX), yBaseline });
+                    for (int i = 0; i < numPeaks; ++i) {
+                        const int xPeak = bodyStartX + ((2 * i + 1) * bodyWidth) / (2 * numPeaks);
+                        const int xValley = bodyStartX + ((2 * i + 2) * bodyWidth) / (2 * numPeaks);
+                        wavePoints.push_back({ this->ToDeviceContextX(xPeak), yWavePeak });
+                        wavePoints.push_back({ this->ToDeviceContextX(xValley), yBaseline });
+                    }
+                    dc->SetPen(lineWidth, PEN_SOLID, 0, 0, LINECAP_ROUND, LINEJOIN_ROUND);
+                    dc->DrawPolyline(static_cast<int>(wavePoints.size()), wavePoints.data());
+                    dc->ResetPen();
+                }
+                else {
+                    int patternStartX = bodyStartX + (startHook ? (lineWidth * 2) : 0);
+                    int patternEndX = bodyEndX - (endHook ? (lineWidth * 2) : 0);
+                    if (patternEndX <= patternStartX) {
+                        patternStartX = bodyStartX;
+                        patternEndX = bodyEndX;
+                    }
+                    const PenStyle penStyle = (lform == LINEFORM_dotted) ? PEN_DOT : PEN_LONG_DASH;
+                    const LineCapStyle patternCap = (lform == LINEFORM_dotted) ? LINECAP_ROUND : LINECAP_SQUARE;
+                    dc->SetPen(lineWidth, penStyle, 0, 0, patternCap);
+                    dc->DrawLine(this->ToDeviceContextX(patternStartX), yBaseline, this->ToDeviceContextX(patternEndX),
+                        yBaseline);
+                    dc->ResetPen();
+                }
+            }
+        }
+        else {
+            Point points[4];
+            int pointCount = 0;
+            if (startBounce || startHook) {
+                points[pointCount++] = { this->ToDeviceContextX(startX), yTop };
+            }
+            points[pointCount++] = { this->ToDeviceContextX(bodyStartX), yBaseline };
+            if (bodyEndX > bodyStartX) {
+                points[pointCount++] = { this->ToDeviceContextX(bodyEndX), yBaseline };
+            }
+            if (endBounce || endHook) {
+                points[pointCount++] = { this->ToDeviceContextX(endX), yTop };
+            }
+
+            dc->SetPen(lineWidth, PEN_SOLID, 0, 0, cap, LINEJOIN_MITER);
+            dc->DrawPolyline(pointCount, points);
+            dc->ResetPen();
+        }
     }
     else if (endHook) {
         const int hookX = this->ToDeviceContextX(std::max(startX, endX));
