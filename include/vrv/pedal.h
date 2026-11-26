@@ -16,7 +16,7 @@
 
 namespace vrv {
 
-enum class PedalLineJoint : int8_t { None = 0, Bounce };
+enum class PedalLineJoint : int8_t { None = 0, Bounce, Step, Connected };
 
 //----------------------------------------------------------------------------
 // Pedal

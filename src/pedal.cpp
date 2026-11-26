@@ -94,6 +94,10 @@ char32_t Pedal::GetPedalGlyph() const
         if (resources->GetGlyph(code)) return code;
     }
 
+    if ((this->GetDir() == pedalLog_DIR_half) && resources->GetGlyph(SMUFL_E656_keyboardPedalHalf)) {
+        return SMUFL_E656_keyboardPedalHalf;
+    }
+
     return (this->GetFunc() == "sostenuto") ? SMUFL_E659_keyboardPedalSost : SMUFL_E650_keyboardPedalPed;
 }
 

@@ -1023,12 +1023,38 @@ FunctorCode PreparePedalsFunctor::VisitPedal(Pedal *pedal)
 
     switch (pedal->GetDir()) {
         case pedalLog_DIR_down:
-            if (active.pedal && (active.pedal->GetStart() != pedal->GetStart())) {
-                active.pedal->SetEnd(pedal->GetStart());
+            if (active.pedal && (active.pedal->GetDir() == pedalLog_DIR_half)) {
+                if (active.pedal->GetStart() != pedal->GetStart()) {
+                    active.pedal->SetEnd(pedal->GetStart());
+                    active.pedal->SetEndJoint(PedalLineJoint::Step);
+                    pedal->SetStartJoint(PedalLineJoint::Step);
+                }
             }
-            active.pedal = pedal;
-            active.grpId = ++m_nextGrpId;
+            else {
+                if (active.pedal && (active.pedal->GetStart() != pedal->GetStart())) {
+                    active.pedal->SetEnd(pedal->GetStart());
+                }
+                active.grpId = ++m_nextGrpId;
+            }
             if (!pedal->HasVgrp()) pedal->SetDrawingGrpId(active.grpId);
+            active.pedal = pedal;
+            break;
+        case pedalLog_DIR_half:
+            if (active.pedal) {
+                if (active.pedal->GetStart() != pedal->GetStart()) {
+                    active.pedal->SetEnd(pedal->GetStart());
+                    const PedalLineJoint joint = (active.pedal->GetDir() == pedalLog_DIR_half)
+                        ? PedalLineJoint::Connected
+                        : PedalLineJoint::Step;
+                    active.pedal->SetEndJoint(joint);
+                    pedal->SetStartJoint(joint);
+                }
+            }
+            else {
+                active.grpId = ++m_nextGrpId;
+            }
+            if (!pedal->HasVgrp()) pedal->SetDrawingGrpId(active.grpId);
+            active.pedal = pedal;
             break;
         case pedalLog_DIR_bounce:
             if (active.pedal) {

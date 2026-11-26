@@ -1132,12 +1132,17 @@ void View::DrawPedalLine(
 
     const bool hasStartEndpoint = (spanningType == SPANNING_START_END) || (spanningType == SPANNING_START);
     const bool hasEndEndpoint = (spanningType == SPANNING_START_END) || (spanningType == SPANNING_END);
-    const bool startBounce = hasStartEndpoint && (pedal->GetStartJoint() == PedalLineJoint::Bounce);
-    const bool endBounce = hasEndEndpoint && (pedal->GetEndJoint() == PedalLineJoint::Bounce);
+    const PedalLineJoint startJoint = hasStartEndpoint ? pedal->GetStartJoint() : PedalLineJoint::None;
+    const PedalLineJoint endJoint = hasEndEndpoint ? pedal->GetEndJoint() : PedalLineJoint::None;
+    const bool startBounce = (startJoint == PedalLineJoint::Bounce);
+    const bool startJoined = (startJoint != PedalLineJoint::None);
+    const bool endBounce = (endJoint == PedalLineJoint::Bounce);
+    const bool endStep = (endJoint == PedalLineJoint::Step);
+    const bool endJoined = (endJoint != PedalLineJoint::None);
     const bool startHook
-        = hasStartEndpoint && !startBounce && (style != PEDALSTYLE_pedline) && (style != PEDALSTYLE_pedstar);
-    const bool endStar = hasEndEndpoint && !endBounce && (style == PEDALSTYLE_pedstar);
-    const bool endHook = hasEndEndpoint && !endBounce && !endStar;
+        = hasStartEndpoint && !startJoined && (style != PEDALSTYLE_pedline) && (style != PEDALSTYLE_pedstar);
+    const bool endStar = hasEndEndpoint && !endJoined && (style == PEDALSTYLE_pedstar);
+    const bool endHook = hasEndEndpoint && !endJoined && !endStar;
 
     const int unit = m_doc->GetDrawingUnit(staff->m_drawingStaffSize);
     const int bracketSize = m_doc->GetDrawingDoubleUnit(staff->m_drawingStaffSize);
@@ -1145,7 +1150,7 @@ void View::DrawPedalLine(
 
     int startX = x1;
     if (hasStartEndpoint) {
-        if (!startBounce) {
+        if (!startJoined) {
             startX -= startRadius;
             // With pedline we need to take into account the initial symbol
             if ((style == PEDALSTYLE_pedline) || (style == PEDALSTYLE_pedstar)) {
@@ -1163,7 +1168,7 @@ void View::DrawPedalLine(
 
     int endX = x2;
     if (hasEndEndpoint) {
-        if (!endBounce) {
+        if (!endJoined) {
             endX -= endRadius - m_doc->GetDrawingStemWidth(staff->m_drawingStaffSize);
             if (endStar) {
                 endX -= bracketSize / 2;
@@ -1193,25 +1198,32 @@ void View::DrawPedalLine(
         dc->ResetFont();
     }
 
-    const int yBaseline = this->ToDeviceContextY(y + lineWidth / 2);
+    const bool isHalf = (pedal->GetDir() == pedalLog_DIR_half);
+    const int yFull = this->ToDeviceContextY(y + lineWidth / 2);
+    const int yHalf = this->ToDeviceContextY(y + bracketSize / 2);
+    const int yBody = isHalf ? yHalf : yFull;
+    const int yStepTarget = isHalf ? yFull : yHalf;
     const int yTop = this->ToDeviceContextY(y + bracketSize);
 
     if (endX > startX) {
         const int spanWidth = endX - startX;
-        const int maxNotch = (startBounce && endBounce) ? (spanWidth * 2 / 5) : (spanWidth * 3 / 5);
+        const int maxNotch = (startBounce && (endBounce || endStep)) ? (spanWidth * 2 / 5) : (spanWidth * 3 / 5);
         const int notchWidth = std::min(bracketSize * 3 / 4, maxNotch);
+        const int stepWidth = std::min(bracketSize * 3 / 8, maxNotch);
         const int bodyStartX = startBounce ? (startX + notchWidth) : startX;
-        const int bodyEndX = endBounce ? (endX - notchWidth) : endX;
+        const int bodyEndX = endBounce ? (endX - notchWidth) : (endStep ? (endX - stepWidth) : endX);
+        const bool hasEndTrail = endBounce || endStep || endHook;
+        const int yEndTrail = endStep ? yStepTarget : yTop;
         const data_LINEFORM lform = pedal->HasLform() ? pedal->GetLform() : LINEFORM_solid;
-        const LineCapStyle cap = (startBounce || endBounce) ? LINECAP_ROUND : LINECAP_BUTT;
+        const LineCapStyle cap = (startJoined || endJoined) ? LINECAP_ROUND : LINECAP_BUTT;
 
         if ((lform == LINEFORM_dashed) || (lform == LINEFORM_dotted) || (lform == LINEFORM_wavy)) {
             dc->SetPen(lineWidth, PEN_SOLID, 0, 0, cap, LINEJOIN_MITER);
             if (startBounce || startHook) {
-                dc->DrawLine(this->ToDeviceContextX(startX), yTop, this->ToDeviceContextX(bodyStartX), yBaseline);
+                dc->DrawLine(this->ToDeviceContextX(startX), yTop, this->ToDeviceContextX(bodyStartX), yBody);
             }
-            if (endBounce || endHook) {
-                dc->DrawLine(this->ToDeviceContextX(bodyEndX), yBaseline, this->ToDeviceContextX(endX), yTop);
+            if (hasEndTrail) {
+                dc->DrawLine(this->ToDeviceContextX(bodyEndX), yBody, this->ToDeviceContextX(endX), yEndTrail);
             }
             dc->ResetPen();
 
@@ -1219,15 +1231,15 @@ void View::DrawPedalLine(
                 if (lform == LINEFORM_wavy) {
                     const int bodyWidth = bodyEndX - bodyStartX;
                     const int numPeaks = std::max(1, bodyWidth / (unit * 2));
-                    const int yWavePeak = this->ToDeviceContextY(y + bracketSize * 3 / 5);
+                    const int yWavePeak = this->ToDeviceContextY(y + (isHalf ? bracketSize : (bracketSize * 3 / 5)));
                     std::vector<Point> wavePoints;
                     wavePoints.reserve(static_cast<size_t>(numPeaks) * 2 + 1);
-                    wavePoints.push_back({ this->ToDeviceContextX(bodyStartX), yBaseline });
+                    wavePoints.push_back({ this->ToDeviceContextX(bodyStartX), yBody });
                     for (int i = 0; i < numPeaks; ++i) {
                         const int xPeak = bodyStartX + ((2 * i + 1) * bodyWidth) / (2 * numPeaks);
                         const int xValley = bodyStartX + ((2 * i + 2) * bodyWidth) / (2 * numPeaks);
                         wavePoints.push_back({ this->ToDeviceContextX(xPeak), yWavePeak });
-                        wavePoints.push_back({ this->ToDeviceContextX(xValley), yBaseline });
+                        wavePoints.push_back({ this->ToDeviceContextX(xValley), yBody });
                     }
                     dc->SetPen(lineWidth, PEN_SOLID, 0, 0, LINECAP_ROUND, LINEJOIN_ROUND);
                     dc->DrawPolyline(static_cast<int>(wavePoints.size()), wavePoints.data());
@@ -1243,8 +1255,8 @@ void View::DrawPedalLine(
                     const PenStyle penStyle = (lform == LINEFORM_dotted) ? PEN_DOT : PEN_LONG_DASH;
                     const LineCapStyle patternCap = (lform == LINEFORM_dotted) ? LINECAP_ROUND : LINECAP_SQUARE;
                     dc->SetPen(lineWidth, penStyle, 0, 0, patternCap);
-                    dc->DrawLine(this->ToDeviceContextX(patternStartX), yBaseline, this->ToDeviceContextX(patternEndX),
-                        yBaseline);
+                    dc->DrawLine(
+                        this->ToDeviceContextX(patternStartX), yBody, this->ToDeviceContextX(patternEndX), yBody);
                     dc->ResetPen();
                 }
             }
@@ -1255,12 +1267,12 @@ void View::DrawPedalLine(
             if (startBounce || startHook) {
                 points[pointCount++] = { this->ToDeviceContextX(startX), yTop };
             }
-            points[pointCount++] = { this->ToDeviceContextX(bodyStartX), yBaseline };
+            points[pointCount++] = { this->ToDeviceContextX(bodyStartX), yBody };
             if (bodyEndX > bodyStartX) {
-                points[pointCount++] = { this->ToDeviceContextX(bodyEndX), yBaseline };
+                points[pointCount++] = { this->ToDeviceContextX(bodyEndX), yBody };
             }
-            if (endBounce || endHook) {
-                points[pointCount++] = { this->ToDeviceContextX(endX), yTop };
+            if (hasEndTrail) {
+                points[pointCount++] = { this->ToDeviceContextX(endX), yEndTrail };
             }
 
             dc->SetPen(lineWidth, PEN_SOLID, 0, 0, cap, LINEJOIN_MITER);
@@ -1271,7 +1283,7 @@ void View::DrawPedalLine(
     else if (endHook) {
         const int hookX = this->ToDeviceContextX(std::max(startX, endX));
         dc->SetPen(lineWidth, PEN_SOLID, 0, 0, LINECAP_BUTT, LINEJOIN_MITER);
-        dc->DrawLine(hookX, yBaseline, hookX, yTop);
+        dc->DrawLine(hookX, yBody, hookX, yTop);
         dc->ResetPen();
     }
 
@@ -2619,7 +2631,12 @@ void View::DrawPedal(DeviceContext *dc, Pedal *pedal, Measure *measure, System *
     const data_PEDALSTYLE style = pedal->GetDrawingStyle();
 
     bool drawSymbol = (style != PEDALSTYLE_line);
-    if ((style == PEDALSTYLE_pedline) && (pedal->GetDir() != pedalLog_DIR_down)) drawSymbol = false;
+    if (style == PEDALSTYLE_pedline) {
+        if ((pedal->GetDir() == pedalLog_DIR_up) || (pedal->GetDir() == pedalLog_DIR_bounce)
+            || (pedal->GetStartJoint() != PedalLineJoint::None)) {
+            drawSymbol = false;
+        }
+    }
 
     // Draw a symbol, if it's not a line
     if (drawSymbol) {
