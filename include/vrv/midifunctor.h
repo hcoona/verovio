@@ -429,6 +429,7 @@ private:
     void AddNoteOn(const Note *note, int tick, int pitch, int velocity);
     void AddNoteOff(int tick, int pitch);
     void AddSustainPedal(int tick, bool on);
+    void AddSustainPedalValue(int tick, int value);
     ///@}
 
     /**

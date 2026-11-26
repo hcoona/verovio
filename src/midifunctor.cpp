@@ -915,6 +915,7 @@ FunctorCode GenerateMIDIFunctor::VisitPedal(const Pedal *pedal)
     // todo: check pedal @func to switch between sustain/soften/damper pedals?
     switch (pedal->GetDir()) {
         case pedalLog_DIR_down: this->AddSustainPedal((startTime * tpq), true); break;
+        case pedalLog_DIR_half: this->AddSustainPedalValue((startTime * tpq), 64); break;
         case pedalLog_DIR_up: this->AddSustainPedal((startTime * tpq), false); break;
         case pedalLog_DIR_bounce:
             this->AddSustainPedal((startTime * tpq), false);
@@ -1151,6 +1152,11 @@ void GenerateMIDIFunctor::AddNoteOff(int tick, int pitch)
 void GenerateMIDIFunctor::AddSustainPedal(int tick, bool on)
 {
     m_midiBuilder.AddSustainPedal(m_midiTrack, tick, m_midiChannel, on);
+}
+
+void GenerateMIDIFunctor::AddSustainPedalValue(int tick, int value)
+{
+    m_midiBuilder.AddSustainPedalValue(m_midiTrack, tick, m_midiChannel, value);
 }
 
 int GenerateMIDIFunctor::GetMIDIPitch(const Note *note)

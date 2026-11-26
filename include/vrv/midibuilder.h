@@ -52,6 +52,7 @@ public:
     void AddNoteOn(int track, int tick, int channel, int key, int velocity, const std::string &id);
     void AddNoteOff(int track, int tick, int channel, int key);
     void AddSustainPedal(int track, int tick, int channel, bool on);
+    void AddSustainPedalValue(int track, int tick, int channel, int value);
     void AddProgramChange(int track, int tick, int channel, int program);
     void AddTempo(int track, int tick, double bpm);
     void AddTimeSignature(int track, int tick, int numerator, int denominator);

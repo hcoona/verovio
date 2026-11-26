@@ -334,12 +334,21 @@ void MIDIBuilder::AddNoteOff(int track, int tick, int channel, int key)
 
 void MIDIBuilder::AddSustainPedal(int track, int tick, int channel, bool on)
 {
+    this->AddSustainPedalValue(track, tick, channel, on ? 127 : 0);
+}
+
+void MIDIBuilder::AddSustainPedalValue(int track, int tick, int channel, int value)
+{
+    const int clampedValue = std::clamp(value, 0, 127);
     if (m_midiFile) {
-        if (on) {
+        if (clampedValue == 127) {
             m_midiFile->addSustainPedalOn(track, tick, channel);
         }
-        else {
+        else if (clampedValue == 0) {
             m_midiFile->addSustainPedalOff(track, tick, channel);
+        }
+        else {
+            m_midiFile->addSustainPedal(track, tick, channel, clampedValue);
         }
     }
     if (!m_jsonTracks) return;
@@ -347,7 +356,7 @@ void MIDIBuilder::AddSustainPedal(int track, int tick, int channel, bool on)
     Event &event = this->AddJsonEvent(track, EventType::Controller, tick);
     event.channel = channel & 0x0f;
     event.data1 = 64;
-    event.data2 = on ? 127 : 0;
+    event.data2 = clampedValue;
 }
 
 void MIDIBuilder::AddProgramChange(int track, int tick, int channel, int program)
