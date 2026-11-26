@@ -10,6 +10,7 @@
 //----------------------------------------------------------------------------
 
 #include "doc.h"
+#include "pedal.h"
 #include "staff.h"
 #include "staffdef.h"
 #include "system.h"
@@ -138,6 +139,17 @@ FunctorCode AdjustFloatingPositionersFunctor::VisitStaffAlignment(StaffAlignment
 
         // Find all the overflowing elements from the staff that overlap horizontally
         for (BoundingBox *bbox : overflowBoxes) {
+            if (m_classId == PEDAL) {
+                const FloatingPositioner *otherPos = dynamic_cast<const FloatingPositioner *>(bbox);
+                if (otherPos && otherPos->GetObject()->Is(PEDAL)) {
+                    const Pedal *currPedal = vrv_cast<const Pedal *>(positioner->GetObject());
+                    const Pedal *otherPedal = vrv_cast<const Pedal *>(otherPos->GetObject());
+                    if ((otherPedal->GetEnd() && (otherPedal->GetEnd() == currPedal->GetStart()))
+                        || (currPedal->GetEnd() && (currPedal->GetEnd() == otherPedal->GetStart()))) {
+                        continue;
+                    }
+                }
+            }
             if (positioner->HasHorizontalOverlapWith(bbox, drawingUnit)) {
                 // update the yRel accordingly
                 positioner->CalcDrawingYRel(m_doc, staffAlignment, bbox);

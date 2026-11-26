@@ -448,6 +448,8 @@ FunctorCode ResetDataFunctor::VisitPedal(Pedal *pedal)
     this->VisitControlElement(pedal);
 
     pedal->SetDrawingStyle(PEDALSTYLE_NONE);
+    pedal->SetEndJoint(PedalLineJoint::None);
+    pedal->SetStartJoint(PedalLineJoint::None);
 
     return FUNCTOR_CONTINUE;
 }

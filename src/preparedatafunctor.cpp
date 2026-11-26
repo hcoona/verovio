@@ -975,36 +975,8 @@ FunctorCode PrepareTimestampsFunctor::VisitMeasureEnd(Measure *measure)
 
 PreparePedalsFunctor::PreparePedalsFunctor(Doc *doc) : DocFunctor(doc)
 {
+    m_nextGrpId = 0;
     m_drawingPedalStyle = PEDALSTYLE_NONE;
-}
-
-FunctorCode PreparePedalsFunctor::VisitMeasureEnd(Measure *measure)
-{
-    // Match down and up pedal lines
-    using PedalIter = std::list<Pedal *>::iterator;
-    PedalIter iter = m_pedalLines.begin();
-    while (iter != m_pedalLines.end()) {
-        if ((*iter)->GetDir() != pedalLog_DIR_down) {
-            ++iter;
-            continue;
-        }
-        PedalIter up = std::find_if(m_pedalLines.begin(), m_pedalLines.end(), [&iter](Pedal *pedal) {
-            return (((*iter)->GetStaff() == pedal->GetStaff()) && (pedal->GetDir() != pedalLog_DIR_down));
-        });
-        if (up != m_pedalLines.end()) {
-            (*iter)->SetEnd((*up)->GetStart());
-            if ((*up)->GetDir() == pedalLog_DIR_bounce) {
-                (*iter)->EndsWithBounce(true);
-            }
-            m_pedalLines.erase(up);
-            iter = m_pedalLines.erase(iter);
-        }
-        else {
-            ++iter;
-        }
-    }
-
-    return FUNCTOR_CONTINUE;
 }
 
 FunctorCode PreparePedalsFunctor::VisitPedal(Pedal *pedal)
@@ -1035,8 +1007,55 @@ FunctorCode PreparePedalsFunctor::VisitPedal(Pedal *pedal)
     }
     pedal->SetDrawingStyle(style);
 
-    if ((style == PEDALSTYLE_line) || (style == PEDALSTYLE_pedline)) {
-        m_pedalLines.push_back(pedal);
+    if (!pedal->GetStart() || pedal->GetEnd() || pedal->HasEndid() || pedal->HasTstamp2()) {
+        return FUNCTOR_CONTINUE;
+    }
+    if ((style != PEDALSTYLE_line) && (style != PEDALSTYLE_pedline)) return FUNCTOR_CONTINUE;
+
+    std::vector<int> staffNs = pedal->GetStaff();
+    if (staffNs.empty()) {
+        const Staff *staff = pedal->GetStart()->GetAncestorStaff(RESOLVE_CROSS_STAFF, false);
+        if (staff) staffNs.push_back(staff->GetN());
+    }
+
+    const PedalKey key(staffNs, pedal->GetFunc());
+    ActivePedalSegment &active = m_activePedals[key];
+
+    switch (pedal->GetDir()) {
+        case pedalLog_DIR_down:
+            if (active.pedal && (active.pedal->GetStart() != pedal->GetStart())) {
+                active.pedal->SetEnd(pedal->GetStart());
+            }
+            active.pedal = pedal;
+            active.grpId = ++m_nextGrpId;
+            if (!pedal->HasVgrp()) pedal->SetDrawingGrpId(active.grpId);
+            break;
+        case pedalLog_DIR_bounce:
+            if (active.pedal) {
+                if (active.pedal->GetStart() != pedal->GetStart()) {
+                    active.pedal->SetEnd(pedal->GetStart());
+                    active.pedal->SetEndJoint(PedalLineJoint::Bounce);
+                    pedal->SetStartJoint(PedalLineJoint::Bounce);
+                }
+            }
+            else {
+                pedal->SetStartJoint(PedalLineJoint::Bounce);
+                active.grpId = ++m_nextGrpId;
+            }
+            if (!pedal->HasVgrp()) pedal->SetDrawingGrpId(active.grpId);
+            active.pedal = pedal;
+            break;
+        case pedalLog_DIR_up:
+            if (active.pedal) {
+                if (active.pedal->GetStart() != pedal->GetStart()) {
+                    active.pedal->SetEnd(pedal->GetStart());
+                }
+                if (!pedal->HasVgrp()) pedal->SetDrawingGrpId(active.grpId);
+                active.pedal = NULL;
+                active.grpId = 0;
+            }
+            break;
+        default: break;
     }
 
     return FUNCTOR_CONTINUE;

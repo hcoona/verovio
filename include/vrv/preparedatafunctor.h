@@ -591,13 +591,12 @@ public:
     /*
      * Abstract base implementation
      */
-    bool ImplementsEndInterface() const override { return true; }
+    bool ImplementsEndInterface() const override { return false; }
 
     /*
      * Functor interface
      */
     ///@{
-    FunctorCode VisitMeasureEnd(Measure *measure) override;
     FunctorCode VisitPedal(Pedal *pedal) override;
     FunctorCode VisitScoreDef(ScoreDef *scoreDef) override;
     FunctorCode VisitScoreOrPartElement(ScoreOrPartElement *scoreOrPart) override;
@@ -607,12 +606,19 @@ public:
 protected:
     //
 private:
-    //
+    struct ActivePedalSegment {
+        Pedal *pedal = NULL;
+        int grpId = 0;
+    };
+    using PedalKey = std::pair<std::vector<int>, std::string>;
+
 public:
     //
 private:
-    // The current pedals to be linked / grouped
-    std::list<Pedal *> m_pedalLines;
+    // The currently active pedal segment per (staff list, @func)
+    std::map<PedalKey, ActivePedalSegment> m_activePedals;
+    // Next auto-generated positive drawingGrpId for continuous pedal chains
+    int m_nextGrpId;
     // The current scoreDef pedal style
     data_PEDALSTYLE m_drawingPedalStyle;
     // The current staffDef pedal styles

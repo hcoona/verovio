@@ -16,6 +16,8 @@
 
 namespace vrv {
 
+enum class PedalLineJoint : int8_t { None = 0, Bounce };
+
 //----------------------------------------------------------------------------
 // Pedal
 //----------------------------------------------------------------------------
@@ -61,11 +63,13 @@ public:
     ////@}
 
     /**
-     * @name Setter and getter of the bounce flag
+     * @name Setters and getters of the pedal line segment joints
      */
     ///@{
-    bool EndsWithBounce() const { return m_endsWithBounce; }
-    void EndsWithBounce(bool endsWithBounce) { m_endsWithBounce = endsWithBounce; }
+    PedalLineJoint GetEndJoint() const { return m_endJoint; }
+    void SetEndJoint(PedalLineJoint endJoint) { m_endJoint = endJoint; }
+    PedalLineJoint GetStartJoint() const { return m_startJoint; }
+    void SetStartJoint(PedalLineJoint startJoint) { m_startJoint = startJoint; }
     ///@}
 
     /**
@@ -97,9 +101,10 @@ public:
 
 private:
     /**
-     * Flag indicating if following pedal mark is a bounce
+     * Joint types at the start and end of a continuous pedal line segment
      */
-    bool m_endsWithBounce;
+    PedalLineJoint m_endJoint;
+    PedalLineJoint m_startJoint;
     /**
      * Resolved pedal style used for drawing
      */

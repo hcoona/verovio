@@ -67,7 +67,8 @@ void Pedal::Reset()
     this->ResetPlacementRelStaff();
     this->ResetVerticalGroup();
 
-    m_endsWithBounce = false;
+    m_endJoint = PedalLineJoint::None;
+    m_startJoint = PedalLineJoint::None;
     m_drawingPedalStyle = PEDALSTYLE_NONE;
 }
 
