@@ -1130,17 +1130,51 @@ void View::DrawPedalLine(
         endRadius = pedal->GetEnd()->GetDrawingRadius(m_doc);
     }
 
-    // Adjust the start if necessary
-    if (spanningType == SPANNING_START_END || spanningType == SPANNING_START) {
-        x1 -= startRadius;
-        // With pedline we need to take into account the initial symbol
-        if ((style == PEDALSTYLE_pedline) || (style == PEDALSTYLE_pedstar)) {
-            x1 += m_doc->GetGlyphWidth(pedal->GetPedalGlyph(), staff->m_drawingStaffSize, false);
+    const bool hasStartEndpoint = (spanningType == SPANNING_START_END) || (spanningType == SPANNING_START);
+    const bool hasEndEndpoint = (spanningType == SPANNING_START_END) || (spanningType == SPANNING_END);
+    const bool startBounce = hasStartEndpoint && (pedal->GetStartJoint() == PedalLineJoint::Bounce);
+    const bool endBounce = hasEndEndpoint && (pedal->GetEndJoint() == PedalLineJoint::Bounce);
+    const bool startHook
+        = hasStartEndpoint && !startBounce && (style != PEDALSTYLE_pedline) && (style != PEDALSTYLE_pedstar);
+    const bool endStar = hasEndEndpoint && !endBounce && (style == PEDALSTYLE_pedstar);
+    const bool endHook = hasEndEndpoint && !endBounce && !endStar;
+
+    const int unit = m_doc->GetDrawingUnit(staff->m_drawingStaffSize);
+    const int bracketSize = m_doc->GetDrawingDoubleUnit(staff->m_drawingStaffSize);
+    const int lineWidth = m_options->m_pedalLineThickness.GetValue() * unit;
+
+    int startX = x1;
+    if (hasStartEndpoint) {
+        if (!startBounce) {
+            startX -= startRadius;
+            // With pedline we need to take into account the initial symbol
+            if ((style == PEDALSTYLE_pedline) || (style == PEDALSTYLE_pedstar)) {
+                startX
+                    += m_doc->GetGlyphWidth(pedal->GetPedalGlyph(), staff->m_drawingStaffSize, false) + bracketSize / 2;
+            }
+            else {
+                startX += lineWidth / 2;
+            }
         }
     }
-    // Adjust the end if necessary
-    if (spanningType == SPANNING_START_END || spanningType == SPANNING_END) {
-        x2 -= endRadius - m_doc->GetDrawingStemWidth(staff->m_drawingStaffSize);
+    else {
+        startX += bracketSize / 2;
+    }
+
+    int endX = x2;
+    if (hasEndEndpoint) {
+        if (!endBounce) {
+            endX -= endRadius - m_doc->GetDrawingStemWidth(staff->m_drawingStaffSize);
+            if (endStar) {
+                endX -= bracketSize / 2;
+            }
+            else {
+                endX -= lineWidth / 2;
+            }
+        }
+    }
+    else {
+        endX -= bracketSize / 2;
     }
 
     if (graphic) {
@@ -1150,33 +1184,49 @@ void View::DrawPedalLine(
         dc->StartGraphic(pedal, "", pedal->GetID(), SPANNING);
     }
 
-    const int bracketSize = m_doc->GetDrawingDoubleUnit(staff->m_drawingStaffSize);
-    const int lineWidth = m_options->m_pedalLineThickness.GetValue() * m_doc->GetDrawingUnit(staff->m_drawingStaffSize);
+    if (endStar) {
+        std::u32string str;
+        str.push_back(SMUFL_E655_keyboardPedalUp);
+        const int staffSize = staff->m_drawingStaffSize;
+        dc->SetFont(m_doc->GetDrawingSmuflFont(staffSize, false));
+        this->DrawSmuflString(dc, endX + bracketSize / 2, y, str, HORIZONTALALIGNMENT_left, staffSize);
+        dc->ResetFont();
+    }
 
-    // Opening bracket - but only if not a pedline value
-    if ((spanningType == SPANNING_START_END) || (spanningType == SPANNING_START)) {
-        if ((style != PEDALSTYLE_pedline) && (style != PEDALSTYLE_pedstar)) {
-            this->DrawFilledRectangle(dc, x1, y, x1 + bracketSize / 2, y + lineWidth);
-            this->DrawFilledRectangle(dc, x1, y, x1 + lineWidth, y + bracketSize);
+    const int yBaseline = this->ToDeviceContextY(y + lineWidth / 2);
+    const int yTop = this->ToDeviceContextY(y + bracketSize);
+
+    if (endX > startX) {
+        const int spanWidth = endX - startX;
+        const int maxNotch = (startBounce && endBounce) ? (spanWidth * 2 / 5) : (spanWidth * 3 / 5);
+        const int notchWidth = std::min(bracketSize * 3 / 4, maxNotch);
+        const int bodyStartX = startBounce ? (startX + notchWidth) : startX;
+        const int bodyEndX = endBounce ? (endX - notchWidth) : endX;
+
+        Point points[4];
+        int pointCount = 0;
+        if (startBounce || startHook) {
+            points[pointCount++] = { this->ToDeviceContextX(startX), yTop };
         }
+        points[pointCount++] = { this->ToDeviceContextX(bodyStartX), yBaseline };
+        if (bodyEndX > bodyStartX) {
+            points[pointCount++] = { this->ToDeviceContextX(bodyEndX), yBaseline };
+        }
+        if (endBounce || endHook) {
+            points[pointCount++] = { this->ToDeviceContextX(endX), yTop };
+        }
+
+        dc->SetPen(
+            lineWidth, PEN_SOLID, 0, 0, (startBounce || endBounce) ? LINECAP_ROUND : LINECAP_BUTT, LINEJOIN_MITER);
+        dc->DrawPolyline(pointCount, points);
+        dc->ResetPen();
     }
-    // Closing bracket
-    if ((spanningType == SPANNING_START_END) || (spanningType == SPANNING_END)) {
-        if (style != PEDALSTYLE_pedstar) {
-            this->DrawFilledRectangle(dc, x2 - bracketSize / 2, y, x2, y + lineWidth);
-            this->DrawFilledRectangle(dc, x2 - lineWidth, y, x2, y + bracketSize);
-        }
-        else {
-            std::u32string str;
-            str.push_back(SMUFL_E655_keyboardPedalUp);
-            const int staffSize = staff->m_drawingStaffSize;
-            data_HORIZONTALALIGNMENT alignment = HORIZONTALALIGNMENT_left;
-            dc->SetFont(m_doc->GetDrawingSmuflFont(staffSize, false));
-            this->DrawSmuflString(dc, x2, y, str, alignment, staffSize);
-            dc->ResetFont();
-        }
+    else if (endHook) {
+        const int hookX = this->ToDeviceContextX(std::max(startX, endX));
+        dc->SetPen(lineWidth, PEN_SOLID, 0, 0, LINECAP_BUTT, LINEJOIN_MITER);
+        dc->DrawLine(hookX, yBaseline, hookX, yTop);
+        dc->ResetPen();
     }
-    this->DrawFilledRectangle(dc, x1 + bracketSize / 2, y, x2 - bracketSize / 2, y + lineWidth);
 
     if (graphic) {
         dc->EndResumedGraphic(graphic, this);
@@ -2522,7 +2572,7 @@ void View::DrawPedal(DeviceContext *dc, Pedal *pedal, Measure *measure, System *
     const data_PEDALSTYLE style = pedal->GetDrawingStyle();
 
     bool drawSymbol = (style != PEDALSTYLE_line);
-    if ((pedal->GetDir() == pedalLog_DIR_up) && (style == PEDALSTYLE_pedline)) drawSymbol = false;
+    if ((style == PEDALSTYLE_pedline) && (pedal->GetDir() != pedalLog_DIR_down)) drawSymbol = false;
 
     // Draw a symbol, if it's not a line
     if (drawSymbol) {
